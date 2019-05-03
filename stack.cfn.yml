@@ -451,7 +451,9 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       DesiredCapacity: !Ref NodeAutoScalingGroupDesiredCapacity
-      LaunchTemplate: !Ref NodeLaunchTemplate
+      LaunchTemplate:
+        LaunchTemplateId: !Ref NodeLaunchTemplate
+        Version: 1
       MinSize: !Ref NodeAutoScalingGroupMinSize
       MaxSize: !Ref NodeAutoScalingGroupMaxSize
       VPCZoneIdentifier:
@@ -475,11 +477,13 @@ Resources:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateData:
-        IamInstanceProfile: !Ref NodeInstanceProfile
+        IamInstanceProfile:
+          Name: !Ref NodeInstanceProfile
         ImageId: !Ref NodeImageId
         InstanceType: !Ref NodeInstanceType
         KeyName: !Ref KeyName
-        Monitoring: true
+        Monitoring:
+          Enabled: true
         BlockDeviceMappings:
           - DeviceName: /dev/xvda
             Ebs:
