@@ -315,7 +315,7 @@ Resources:
                 Action:
                   - eks:Describe*
 
-   AwsAuthConfigMapConfigCustomResourceLambdaExecutionIamRole:
+  AwsAuthConfigMapConfigCustomResourceLambdaExecutionIamRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
