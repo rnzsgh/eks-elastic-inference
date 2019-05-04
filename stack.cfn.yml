@@ -490,18 +490,21 @@ Resources:
               VolumeSize: !Ref NodeVolumeSize
               VolumeType: gp2
               DeleteOnTermination: true
-        SecurityGroupIds:
-          - !Ref NodeSecurityGroup
         UserData:
           Fn::Base64:
             !Sub |
               #!/bin/bash
               set -o xtrace
+              mv /etc/amazon/ssm/seelog.xml.template /etc/amazon/ssm/seelog.xml
+              systemctl enable amazon-ssm-agent
               /etc/eks/bootstrap.sh ${EksCluster} ${BootstrapArguments}
-              /opt/aws/bin/cfn-signal --exit-code $? \
-                       --stack  ${AWS::StackName} \
-                       --resource NodeGroup  \
-                       --region ${AWS::Region}
+              /opt/aws/bin/cfn-signal --exit-code $? --stack  ${AWS::StackName} --resource NodeGroup --region ${AWS::Region}
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: true
+            DeleteOnTermination: true
+            Groups:
+              - !Ref NodeSecurityGroup
 
 
 Outputs:
