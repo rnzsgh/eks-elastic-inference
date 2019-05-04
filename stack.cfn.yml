@@ -150,7 +150,7 @@ Parameters:
     Type: AWS::EC2::AvailabilityZone::Name
     ConstraintDescription: Must be a valid availability zone
 
-  AdminRoleArn:
+  CreateRoleArn:
     Type: String
 
   AdminUser:
@@ -290,11 +290,60 @@ Resources:
           - !Ref PublicSubnet1
           - !Ref PublicSubnet2
     DependsOn:
-      - ClusterRole
-      - ClusterControlPlaneSecurityGroup
       - PublicSubnetRouteTableAssociation0
       - PublicSubnetRouteTableAssociation1
       - PublicSubnetRouteTableAssociation2
+
+  EksAdminRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: eks-describe
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Resource: '*'
+                Effect: Allow
+                Action:
+                  - eks:Describe*
+
+   AwsAuthConfigMapConfigCustomResourceLambdaExecutionIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: eks-describe
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Resource: '*'
+                Effect: Allow
+                Action:
+                  - eks:Describe*
+        - PolicyName: assume-admin-role
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Resource: !Ref CreateRoleArn
+                Effect: Allow
+                Action:
+                  - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   AwsAuthConfigMapConfigCustomResourceLambda:
     Type: AWS::Lambda::Function
@@ -303,7 +352,7 @@ Resources:
         S3Bucket: !Ref LambdaCustomResourceBucket
         S3Key: cfn-eks-custom-resource-configmap.zip
       Handler: main
-      Role: !Ref AdminRoleArn
+      Role: !GetAtt AwsAuthConfigMapConfigCustomResourceLambdaExecutionIamRole.Arn
       Runtime: go1.x
       Timeout: 300
 
@@ -311,15 +360,13 @@ Resources:
     Type: Custom::AwsAuthConfigMapConfigCustomResource
     Properties:
       ServiceToken: !GetAtt AwsAuthConfigMapConfigCustomResourceLambda.Arn
-      AdminRoleArn: !Ref AdminRoleArn
+      CreateRoleArn: !Ref CreateRoleArn
       ClusterName: !Ref EksCluster
       ClusterEndpoint: !GetAtt EksCluster.Endpoint
       NodeInstanceRoleArn: !GetAtt NodeInstanceRole.Arn
       AdminUser: !Ref AdminUser
+      AdminRoleArn: !GetAtt EksAdminRole.Arn
       AccountId: !Ref AWS::AccountId
-    DependsOn:
-      - EksCluster
-      - AwsAuthConfigMapConfigCustomResourceLambda
 
   ClusterControlPlaneSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -341,7 +388,6 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
         - arn:aws:iam::aws:policy/AmazonEKSServicePolicy
-
 
   # EKS Nodes ------------------------------------------------------------------
 
@@ -495,8 +541,13 @@ Resources:
             !Sub |
               #!/bin/bash
               set -o xtrace
+              yum install -y awslogs
+              systemctl enable awslogsd.service
+              systemctl start awslogsd
+              # TODO - configure /var/log/messages - /var/log/secure
+              yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
               mv /etc/amazon/ssm/seelog.xml.template /etc/amazon/ssm/seelog.xml
-              systemctl enable amazon-ssm-agent
+              systemctl restart amazon-ssm-agent
               /etc/eks/bootstrap.sh ${EksCluster} ${BootstrapArguments}
               /opt/aws/bin/cfn-signal --exit-code $? --stack  ${AWS::StackName} --resource NodeGroup --region ${AWS::Region}
         NetworkInterfaces:
