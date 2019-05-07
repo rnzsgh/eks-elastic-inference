@@ -315,36 +315,6 @@ Resources:
                 Action:
                   - eks:Describe*
 
-  AwsAuthConfigMapConfigCustomResourceLambdaExecutionIamRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: eks-describe
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Resource: '*'
-                Effect: Allow
-                Action:
-                  - eks:Describe*
-        - PolicyName: assume-admin-role
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Resource: !Ref CreateRoleArn
-                Effect: Allow
-                Action:
-                  - sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
   AwsAuthConfigMapConfigCustomResourceLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -352,7 +322,7 @@ Resources:
         S3Bucket: !Ref LambdaCustomResourceBucket
         S3Key: cfn-eks-custom-resource-configmap.zip
       Handler: main
-      Role: !GetAtt AwsAuthConfigMapConfigCustomResourceLambdaExecutionIamRole.Arn
+      Role: !Ref CreateRoleArn
       Runtime: go1.x
       Timeout: 300
 
