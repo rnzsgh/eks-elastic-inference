@@ -1,6 +1,6 @@
 #!/bin/bash
 
-STACK_NAME=eks-0
+STACK_NAME=eks-b
 NODE_GROUP_NAME=compute
 
 ACCOUNT_ID=$(aws sts get-caller-identity --output text --query 'Account')
@@ -36,5 +36,5 @@ aws cloudformation create-stack \
   ParameterKey=KeyName,ParameterValue=$KEY_NAME \
   ParameterKey=NodeImageId,ParameterValue=$AMI_ID \
   ParameterKey=NodeGroupName,ParameterValue=$NODE_GROUP_NAME \
-  ParameterKey=BootstrapArguments,ParameterValue=$BOOTSTRAP
+  ParameterKey=BootstrapArguments,ParameterValue="'$BOOTSTRAP'"
 
