@@ -194,6 +194,36 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-vpc
 
+  ElasticInferenceVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.elastic-inference.runtime
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PublicSubnet0
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroupIds:
+        - !GetAtt ElasticInferenceVpcEndpointSecurityGroup.GroupId
+
+  ElasticInferenceVpcEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Elastic Inference Vpc Endpoint security group
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref NodeSecurityGroup
+          IpProtocol: tcp
+          ToPort: 443
+          FromPort: 443
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          ToPort: 443
+          FromPort: 443
+
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -386,6 +416,19 @@ Resources:
           Action:
             - sts:AssumeRole
       Path: /
+      Policies:
+        - PolicyName: ei-access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - elastic-inference:Connect
+                  - iam:List*
+                  - iam:Get*
+                  - ec2:Describe*
+                  - ec2:Get*
+                Resource: '*'
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
         - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
@@ -542,6 +585,7 @@ Resources:
       ElasticInferenceType: !Ref ElasticInferenceType
       LaunchTemplateId: !Ref NodeLaunchTemplate
       LaunchTemplateVersion: !GetAtt NodeLaunchTemplate.DefaultVersionNumber
+      AutoScalingGroupName: !Ref NodeGroup
     DependsOn: NodeLaunchTemplate
 
   AddElasticInferenceLaunchTemplateCustomResourceLambda:
