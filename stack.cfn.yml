@@ -538,7 +538,6 @@ Resources:
         PauseTime: PT5M
     DependsOn:
       - AwsAuthConfigMapConfigCustomResource
-      - AddElasticInferenceLaunchTemplateCustomResource
 
   NodeLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -623,6 +622,10 @@ Resources:
                 Action:
                   - ec2:CreateLaunchTemplateVersion
                   - ec2:ModifyLaunchTemplate
+              - Resource: !Sub arn:aws:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/${NodeGroup}
+                Effect: Allow
+                Action:
+                  - autoscaling:UpdateAutoScalingGroup
 
 
 Outputs:
