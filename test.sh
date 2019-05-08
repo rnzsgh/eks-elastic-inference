@@ -1,6 +1,6 @@
 #!/bin/bash
 
-STACK_NAME=eks-a
+STACK_NAME=eks-0
 NODE_GROUP_NAME=compute
 
 ACCOUNT_ID=$(aws sts get-caller-identity --output text --query 'Account')
@@ -9,7 +9,9 @@ AZ_0=us-east-1a
 AZ_1=us-east-1b
 AZ_2=us-east-1c
 
-KEY_NAME=rnzdev
+KEY_NAME=SOMETHING
+
+BOOTSTRAP="--kubelet-extra-args --node-labels=inference=true,nodegroup=elastic-inference --max-pods=1"
 
 # https://docs.aws.amazon.com/eks/latest/userguide/eks-optimized-ami.html
 AMI_ID=ami-0abcb9f9190e867ab # us-east-1
@@ -33,5 +35,6 @@ aws cloudformation create-stack \
   ParameterKey=CreateRoleArn,ParameterValue=$CREATE_ROLE_ARN \
   ParameterKey=KeyName,ParameterValue=$KEY_NAME \
   ParameterKey=NodeImageId,ParameterValue=$AMI_ID \
-  ParameterKey=NodeGroupName,ParameterValue=$NODE_GROUP_NAME
+  ParameterKey=NodeGroupName,ParameterValue=$NODE_GROUP_NAME \
+  ParameterKey=BootstrapArguments,ParameterValue=$BOOTSTRAP
 
