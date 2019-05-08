@@ -517,7 +517,7 @@ Resources:
       DesiredCapacity: !Ref NodeAutoScalingGroupDesiredCapacity
       LaunchTemplate:
         LaunchTemplateId: !Ref NodeLaunchTemplate
-        Version: 1
+        Version: 2
       MinSize: !Ref NodeAutoScalingGroupMinSize
       MaxSize: !Ref NodeAutoScalingGroupMaxSize
       VPCZoneIdentifier:
@@ -577,28 +577,27 @@ Resources:
             Groups:
               - !Ref NodeSecurityGroup
 
-  AddElasticInferenceLaunchTemplateCustomResource:
-    Type: Custom::AddElasticInferenceLaunchTemplateCustomResource
+  AddEiLaunchTemplateCustomResource:
+    Type: Custom::AddEiLaunchTemplateCustomResource
     Properties:
-      ServiceToken: !GetAtt AddElasticInferenceLaunchTemplateCustomResourceLambda.Arn
+      ServiceToken: !GetAtt AddEiLaunchTemplateCustomResourceLambda.Arn
       ElasticInferenceType: !Ref ElasticInferenceType
       LaunchTemplateId: !Ref NodeLaunchTemplate
       LaunchTemplateVersion: !GetAtt NodeLaunchTemplate.DefaultVersionNumber
-      AutoScalingGroupName: !Ref NodeGroup
     DependsOn: NodeLaunchTemplate
 
-  AddElasticInferenceLaunchTemplateCustomResourceLambda:
+  AddEiLaunchTemplateCustomResourceLambda:
     Type: AWS::Lambda::Function
     Properties:
       Code:
         S3Bucket: !Ref LambdaCustomResourceBucket
         S3Key: cfn-custom-resource-ei-launch-template.zip
       Handler: main
-      Role: !GetAtt AddElasticInferenceLaunchTemplateCustomResourceLambdaExecutionRole.Arn
+      Role: !GetAtt AddEiLaunchTemplateCustomResourceLambdaExecutionRole.Arn
       Runtime: go1.x
       Timeout: 300
 
-  AddElasticInferenceLaunchTemplateCustomResourceLambdaExecutionRole:
+  AddEiLaunchTemplateCustomResourceLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       ManagedPolicyArns:
@@ -622,10 +621,6 @@ Resources:
                 Action:
                   - ec2:CreateLaunchTemplateVersion
                   - ec2:ModifyLaunchTemplate
-              - Resource: !Sub arn:aws:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/${NodeGroup}
-                Effect: Allow
-                Action:
-                  - autoscaling:UpdateAutoScalingGroup
 
 
 Outputs:
