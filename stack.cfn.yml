@@ -488,6 +488,7 @@ Resources:
         MaxBatchSize: 1
         MinInstancesInService: !Ref NodeAutoScalingGroupDesiredCapacity
         PauseTime: PT5M
+    DependsOn: AwsAuthConfigMapConfigCustomResource
 
   NodeLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -514,7 +515,7 @@ Resources:
               yum install -y awslogs
               systemctl enable awslogsd.service
               systemctl start awslogsd
-              # TODO - configure /var/log/messages - /var/log/secure
+              # TODO - configure /var/log/secure
               yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
               mv /etc/amazon/ssm/seelog.xml.template /etc/amazon/ssm/seelog.xml
               systemctl restart amazon-ssm-agent
