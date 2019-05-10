@@ -165,6 +165,20 @@ Parameters:
     Type: String
     Default: public-aws-serverless-repo
 
+  DefaultTaskQueueVisibilityTimeout:
+    Type: Number
+    Description: The SQS visibility timeout
+    MinValue: 0
+    MaxValue: 43200
+    Default: 7200 # Two hour default
+
+  DefaultTaskCompletedQueueVisibilityTimeout:
+    Type: Number
+    Description: The SQS visibility timeout
+    MinValue: 0
+    MaxValue: 43200
+    Default: 500
+
 
 Mappings:
 
@@ -311,6 +325,52 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRouteTable
 
+  # Queues --------------------------------------------------------------------
+
+  TaskQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub task-queue-${AWS::StackName}
+      VisibilityTimeout: !Ref DefaultTaskQueueVisibilityTimeout
+      KmsMasterKeyId: alias/aws/sqs
+
+  TaskCompletedQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub task-completed-queue-${AWS::StackName}
+      VisibilityTimeout: !Ref DefaultTaskCompletedQueueVisibilityTimeout
+      KmsMasterKeyId: alias/aws/sqs
+
+  # Buckets --------------------------------------------------------------------
+
+  TaskDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub task-data-bucket-${AWS::AccountId}-${AWS::StackName}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  ModelBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub model-bucket-${AWS::AccountId}-${AWS::StackName}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
   # EKS Cluster ----------------------------------------------------------------
 
   EksCluster:
@@ -429,6 +489,45 @@ Resources:
                   - ec2:Describe*
                   - ec2:Get*
                 Resource: '*'
+        - PolicyName: sqs-access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:ChangeMessageVisibility
+                Resource:
+                  - !GetAtt TaskQueue.Arn
+                  - !GetAtt TaskCompletedQueue.Arn
+        - PolicyName: s3-access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:Get*
+                  - s3:List*
+                  - s3:PutObjectAcl
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                  - s3:PutObjectVersionAcl
+                  - s3:PutObjectVersionTagging
+                  - s3:PutObjectRetention
+                  - s3:PutObjectLegalHold
+                  - s3:PutBucketObjectLockConfiguration
+                  - s3:AbortMultipartUpload
+                  - s3:DeleteObject
+                  - s3:DeleteObjectTagging
+                  - s3:DeleteObjectVersion
+                  - s3:DeleteObjectVersionTagging
+                Resource:
+                  - !Sub arn:aws:s3:::${TaskDataBucket}/*
+                  - !Sub arn:aws:s3:::${TaskDataBucket}
+                  - !Sub arn:aws:s3:::${ModelBucket}/*
+                  - !Sub arn:aws:s3:::${ModelBucket}
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
         - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
