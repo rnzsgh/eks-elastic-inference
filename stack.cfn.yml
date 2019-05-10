@@ -517,7 +517,7 @@ Resources:
       DesiredCapacity: !Ref NodeAutoScalingGroupDesiredCapacity
       LaunchTemplate:
         LaunchTemplateId: !Ref NodeLaunchTemplate
-        Version: 2
+        Version: 1
       MinSize: !Ref NodeAutoScalingGroupMinSize
       MaxSize: !Ref NodeAutoScalingGroupMaxSize
       VPCZoneIdentifier:
@@ -548,6 +548,8 @@ Resources:
         ImageId: !Ref NodeImageId
         InstanceType: !Ref NodeInstanceType
         KeyName: !Ref KeyName
+        ElasticInferenceAccelerators:
+          - Type: !Ref ElasticInferenceType
         Monitoring:
           Enabled: true
         BlockDeviceMappings:
@@ -576,51 +578,6 @@ Resources:
             DeleteOnTermination: true
             Groups:
               - !Ref NodeSecurityGroup
-
-  AddEiLaunchTemplateCustomResource:
-    Type: Custom::AddEiLaunchTemplateCustomResource
-    Properties:
-      ServiceToken: !GetAtt AddEiLaunchTemplateCustomResourceLambda.Arn
-      ElasticInferenceType: !Ref ElasticInferenceType
-      LaunchTemplateId: !Ref NodeLaunchTemplate
-      LaunchTemplateVersion: !GetAtt NodeLaunchTemplate.DefaultVersionNumber
-    DependsOn: NodeLaunchTemplate
-
-  AddEiLaunchTemplateCustomResourceLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      Code:
-        S3Bucket: !Ref LambdaCustomResourceBucket
-        S3Key: cfn-custom-resource-ei-launch-template.zip
-      Handler: main
-      Role: !GetAtt AddEiLaunchTemplateCustomResourceLambdaExecutionRole.Arn
-      Runtime: go1.x
-      Timeout: 300
-
-  AddEiLaunchTemplateCustomResourceLambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Path: /
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action: sts:AssumeRole
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-      Policies:
-        - PolicyName: custom-resource
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Resource: !Sub arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${NodeLaunchTemplate}
-                Effect: Allow
-                Action:
-                  - ec2:CreateLaunchTemplateVersion
-                  - ec2:ModifyLaunchTemplate
 
 
 Outputs:
