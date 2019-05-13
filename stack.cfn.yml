@@ -216,7 +216,40 @@ Parameters:
   NodeAutoScalingGroupDesiredCapacity:
     Description: Desired capacity of Node Group ASG.
     Type: Number
-    Default: 3
+    Default: 2
+
+  InferenceNodeAutoScalingGroupMinSize:
+    Description: Minimum size of Node Group ASG.
+    Type: Number
+    Default: 2
+
+  InferenceNodeAutoScalingGroupMaxSize:
+    Description: Maximum size of Node Group ASG. Set to at least 1 greater than NodeAutoScalingGroupDesiredCapacity.
+    Type: Number
+    Default: 10
+
+  InferenceNodeAutoScalingGroupDesiredCapacity:
+    Description: Desired capacity of Node Group ASG.
+    Type: Number
+    Default: 2
+
+  InferenceScaleEvaluationPeriods:
+    Description: The number of periods over which data is compared to the specified threshold
+    Type: Number
+    Default: 2
+    MinValue: 2
+
+  InferenceQueueDepthScaleOutThreshold:
+    Type: Number
+    Description: Average queue depth value to trigger auto scaling out
+    Default: 2
+
+  InferenceQueueDepthScaleInThreshold:
+    Type: Number
+    Description: Average queue depth value to trigger auto scaling in
+    Default: 4
+    MinValue: 0
+    ConstraintDescription: Value must be between 0 or more
 
   NodeVolumeSize:
     Description: Node volume size
@@ -284,6 +317,42 @@ Parameters:
     MinValue: 0
     MaxValue: 43200
     Default: 500
+
+  # Scaling params
+  InferenceScaleEvaluationPeriods:
+    Description: The number of periods over which data is compared to the specified threshold
+    Type: Number
+    Default: 2
+    MinValue: 2
+
+  InferenceQueueDepthScaleOutThreshold:
+    Type: Number
+    Description: Average queue depth value to trigger auto scaling out
+    Default: 2
+
+  InferenceQueueDepthScaleInThreshold:
+    Type: Number
+    Description: Average queue depth value to trigger auto scaling in
+    Default: 25
+    MinValue: 0
+    ConstraintDescription: Value must be between 0 or more
+
+  InferenceNodeAutoScalingGroupMinSize:
+    Description: Minimum size of Node Group ASG.
+    Type: Number
+    Default: 1
+
+  InferenceAutoScalingGroupMaxSize:
+    Description: Maximum size of Node Group ASG. Set to at least 1 greater than NodeAutoScalingGroupDesiredCapacity.
+    Type: Number
+    Default: 4
+
+  InferenceInstanceMaxCount:
+    Type: Number
+    Description: Maximum number of containers to run for the service when auto scaling out
+    Default: 5
+    MinValue: 1
+    ConstraintDescription: Value must be at least one
 
 
 Mappings:
@@ -463,20 +532,6 @@ Resources:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
 
-  ModelBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub model-bucket-${AWS::AccountId}-${AWS::StackName}
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-
   # EKS Cluster ----------------------------------------------------------------
 
   EksCluster:
@@ -522,7 +577,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref LambdaCustomResourceBucket
-        S3Key: cfn-eks-custom-resource-configmap.zip
+        S3Key: cfn-eks-custom-resource-aws-auth-configmap.zip
       Handler: main
       Role: !Ref CreateRoleArn
       Runtime: go1.x
@@ -595,6 +650,7 @@ Resources:
                   - iam:Get*
                   - ec2:Describe*
                   - ec2:Get*
+                  - ec2:ModifyInstanceAttribute
                 Resource: '*'
         - PolicyName: sqs-access
           PolicyDocument:
@@ -633,8 +689,6 @@ Resources:
                 Resource:
                   - !Sub arn:aws:s3:::${TaskDataBucket}/*
                   - !Sub arn:aws:s3:::${TaskDataBucket}
-                  - !Sub arn:aws:s3:::${ModelBucket}/*
-                  - !Sub arn:aws:s3:::${ModelBucket}
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
         - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
@@ -720,12 +774,12 @@ Resources:
   InferenceNodeGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      DesiredCapacity: !Ref NodeAutoScalingGroupDesiredCapacity
+      DesiredCapacity: !Ref InferenceNodeAutoScalingGroupDesiredCapacity
+      MinSize: !Ref InferenceNodeAutoScalingGroupMinSize
+      MaxSize: !Ref InferenceNodeAutoScalingGroupMaxSize
       LaunchTemplate:
         LaunchTemplateId: !Ref InferenceNodeLaunchTemplate
         Version: 1
-      MinSize: !Ref NodeAutoScalingGroupMinSize
-      MaxSize: !Ref NodeAutoScalingGroupMaxSize
       VPCZoneIdentifier:
         - !Ref PublicSubnet0
         - !Ref PublicSubnet1
@@ -803,7 +857,7 @@ Resources:
               yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
               mv /etc/amazon/ssm/seelog.xml.template /etc/amazon/ssm/seelog.xml
               systemctl restart amazon-ssm-agent
-              /etc/eks/bootstrap.sh ${EksCluster} ${BootstrapArguments}
+              /etc/eks/bootstrap.sh ${EksCluster} ${InferenceBootstrapArguments}
               /opt/aws/bin/cfn-signal --exit-code $? --stack  ${AWS::StackName} --resource InferenceNodeGroup --region ${AWS::Region}
         NetworkInterfaces:
           - DeviceIndex: 0
@@ -848,6 +902,61 @@ Resources:
             DeleteOnTermination: true
             Groups:
               - !Ref NodeSecurityGroup
+
+  InferenceScaleOutPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref InferenceNodeGroup
+      ScalingAdjustment: 2
+      EstimatedInstanceWarmup: 60
+      Cooldown: 60
+
+
+  InferenceScaleInPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref InferenceNodeGroup
+      ScalingAdjustment: -1
+      EstimatedInstanceWarmup: 60
+      Cooldown: 60
+
+  InferenceScaleOutAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      EvaluationPeriods: !Ref InferenceScaleEvaluationPeriods
+      Statistic: Average
+      TreatMissingData: notBreaching
+      Threshold: !Ref InferenceQueueDepthScaleOutThreshold
+      AlarmDescription: Alarm to add capacity if queue depth is high
+      Period: 60
+      AlarmActions:
+        - !Ref InferenceScaleOutPolicy
+      Namespace:  AWS/SQS
+      Dimensions:
+        - Name: QueueName
+          Value: !Ref TaskQueue
+      ComparisonOperator: GreaterThanThreshold
+      MetricName: ApproximateNumberOfMessagesVisible
+
+  InferenceScaleInAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      EvaluationPeriods: !Ref InferenceScaleEvaluationPeriods
+      Statistic: Average
+      TreatMissingData: notBreaching
+      Threshold: !Ref InferenceQueueDepthScaleInThreshold
+      AlarmDescription: Alarm to reduce capacity if container queue depth is low
+      Period: 300
+      AlarmActions:
+        - !Ref InferenceScaleInPolicy
+      Namespace: AWS/SQS
+      Dimensions:
+        - Name: QueueName
+          Value: !Ref TaskQueue
+      ComparisonOperator: LessThanThreshold
+      MetricName: ApproximateNumberOfMessagesVisible
 
 
 Outputs:
@@ -912,5 +1021,41 @@ Outputs:
     Value: !Ref ClusterControlPlaneSecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}-ClusterControlPlaneSecurityGroup
+
+  TaskQueueUrl:
+    Description: Task queue url
+    Value: !Ref TaskQueue
+    Export:
+      Name: !Sub ${AWS::StackName}-TaskQueueUrl
+
+  TaskQueueArn:
+    Description: Task queue arn
+    Value: !GetAtt TaskQueue.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-TaskQueueArn
+
+  TaskQueueName:
+    Description: Task queue name
+    Value: !GetAtt TaskQueue.QueueName
+    Export:
+      Name: !Sub ${AWS::StackName}-TaskQueueName
+
+  TaskCompletedQueueUrl:
+    Description: TaskCompleted queue url
+    Value: !Ref TaskCompletedQueue
+    Export:
+      Name: !Sub ${AWS::StackName}-TaskCompletedQueueUrl
+
+  TaskCompletedQueueArn:
+    Description: TaskCompleted queue arn
+    Value: !GetAtt TaskCompletedQueue.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-TaskCompletedQueueArn
+
+  TaskCompletedQueueName:
+    Description: TaskCompleted queue name
+    Value: !GetAtt TaskCompletedQueue.QueueName
+    Export:
+      Name: !Sub ${AWS::StackName}-TaskCompletedQueueName
 
 
