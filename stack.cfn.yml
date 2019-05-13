@@ -662,6 +662,8 @@ Resources:
                   - sqs:ReceiveMessage
                   - sqs:DeleteMessage
                   - sqs:ChangeMessageVisibility
+                  - sqs:GetQueueUrl
+                  - sqs:GetQueueAttributes
                 Resource:
                   - !GetAtt TaskQueue.Arn
                   - !GetAtt TaskCompletedQueue.Arn
@@ -909,9 +911,7 @@ Resources:
       AdjustmentType: ChangeInCapacity
       AutoScalingGroupName: !Ref InferenceNodeGroup
       ScalingAdjustment: 2
-      EstimatedInstanceWarmup: 60
       Cooldown: 60
-
 
   InferenceScaleInPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
@@ -919,7 +919,6 @@ Resources:
       AdjustmentType: ChangeInCapacity
       AutoScalingGroupName: !Ref InferenceNodeGroup
       ScalingAdjustment: -1
-      EstimatedInstanceWarmup: 60
       Cooldown: 60
 
   InferenceScaleOutAlarm:
