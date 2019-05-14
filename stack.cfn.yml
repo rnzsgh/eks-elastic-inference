@@ -306,14 +306,14 @@ Parameters:
 
   DefaultTaskQueueVisibilityTimeout:
     Type: Number
-    Description: The SQS visibility timeout
+    Description: The queue visibility timeout
     MinValue: 0
     MaxValue: 43200
     Default: 7200 # Two hour default
 
   DefaultTaskCompletedQueueVisibilityTimeout:
     Type: Number
-    Description: The SQS visibility timeout
+    Description: The queue visibility timeout
     MinValue: 0
     MaxValue: 43200
     Default: 500
@@ -572,6 +572,7 @@ Resources:
                 Action:
                   - eks:Describe*
 
+  # https://github.com/rnzsgh/cfn-eks-custom-resource-aws-auth-configmap
   AwsAuthConfigMapConfigCustomResourceLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -905,6 +906,73 @@ Resources:
             Groups:
               - !Ref NodeSecurityGroup
 
+  TaskQueueDepthLambdaEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      State: ENABLED
+      ScheduleExpression: 'cron(* * * * ? *)'
+      Targets:
+        - Arn: !GetAtt TaskQueueDepthLambda.Arn
+          Id: !Ref TaskQueueDepthLambda
+
+  TaskQueueDepthLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      FunctionName: !Ref TaskQueueDepthLambda
+      SourceArn: !GetAtt TaskQueueDepthLambdaEventRule.Arn
+
+  # https://github.com/rnzsgh/lambda-update-sqs-queue-depth
+  TaskQueueDepthLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Environment:
+        Variables:
+          QueueUrl: !Ref TaskQueue
+          CloudWatchMetricNamespace: eks-ei/sqs
+          CloudWatchMetricName: TaskQueueApproximateNumberOfMessages
+      Code:
+        S3Bucket: public-aws-serverless-repo
+        S3Key: lambda-update-sqs-queue-depth.zip
+      Handler: main
+      Role: !GetAtt TaskQueueDepthLambdaExecutionRole.Arn
+      Runtime: go1.x
+      Timeout: 300
+
+  TaskQueueDepthLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: sqs-attr
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:GetQueueAttributes
+                Resource:
+                  - !GetAtt TaskQueue.Arn
+        - PolicyName: cloudwatch-put
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+
   InferenceScaleOutPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
@@ -932,12 +1000,9 @@ Resources:
       Period: 60
       AlarmActions:
         - !Ref InferenceScaleOutPolicy
-      Namespace:  AWS/SQS
-      Dimensions:
-        - Name: QueueName
-          Value: !Ref TaskQueue
+      Namespace:  eks-ei/sqs
+      MetricName: TaskQueueApproximateNumberOfMessages
       ComparisonOperator: GreaterThanThreshold
-      MetricName: ApproximateNumberOfMessagesVisible
 
   InferenceScaleInAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -950,12 +1015,9 @@ Resources:
       Period: 300
       AlarmActions:
         - !Ref InferenceScaleInPolicy
-      Namespace: AWS/SQS
-      Dimensions:
-        - Name: QueueName
-          Value: !Ref TaskQueue
+      Namespace: eks-ei/sqs
+      MetricName: TaskQueueApproximateNumberOfMessages
       ComparisonOperator: LessThanThreshold
-      MetricName: ApproximateNumberOfMessagesVisible
 
 
 Outputs:
