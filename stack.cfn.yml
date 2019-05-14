@@ -333,7 +333,7 @@ Parameters:
   InferenceQueueDepthScaleInThreshold:
     Type: Number
     Description: Average queue depth value to trigger auto scaling in
-    Default: 25
+    Default: 10
     MinValue: 0
     ConstraintDescription: Value must be between 0 or more
 
@@ -350,7 +350,7 @@ Parameters:
   InferenceInstanceMaxCount:
     Type: Number
     Description: Maximum number of containers to run for the service when auto scaling out
-    Default: 5
+    Default: 10
     MinValue: 1
     ConstraintDescription: Value must be at least one
 
