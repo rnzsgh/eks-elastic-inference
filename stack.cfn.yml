@@ -337,11 +337,6 @@ Parameters:
     MinValue: 0
     ConstraintDescription: Value must be between 0 or more
 
-  InferenceNodeAutoScalingGroupMinSize:
-    Description: Minimum size of Node Group ASG.
-    Type: Number
-    Default: 1
-
   InferenceAutoScalingGroupMaxSize:
     Description: Maximum size of Node Group ASG. Set to at least 1 greater than NodeAutoScalingGroupDesiredCapacity.
     Type: Number
