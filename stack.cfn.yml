@@ -233,24 +233,6 @@ Parameters:
     Type: Number
     Default: 2
 
-  InferenceScaleEvaluationPeriods:
-    Description: The number of periods over which data is compared to the specified threshold
-    Type: Number
-    Default: 2
-    MinValue: 2
-
-  InferenceQueueDepthScaleOutThreshold:
-    Type: Number
-    Description: Average queue depth value to trigger auto scaling out
-    Default: 2
-
-  InferenceQueueDepthScaleInThreshold:
-    Type: Number
-    Description: Average queue depth value to trigger auto scaling in
-    Default: 4
-    MinValue: 0
-    ConstraintDescription: Value must be between 0 or more
-
   NodeVolumeSize:
     Description: Node volume size
     Type: Number
@@ -322,8 +304,8 @@ Parameters:
   InferenceScaleEvaluationPeriods:
     Description: The number of periods over which data is compared to the specified threshold
     Type: Number
-    Default: 2
-    MinValue: 2
+    Default: 1
+    MinValue: 1
 
   InferenceQueueDepthScaleOutThreshold:
     Type: Number
@@ -336,18 +318,6 @@ Parameters:
     Default: 2
     MinValue: 0
     ConstraintDescription: Value must be between 0 or more
-
-  InferenceAutoScalingGroupMaxSize:
-    Description: Maximum size of Node Group ASG. Set to at least 1 greater than NodeAutoScalingGroupDesiredCapacity.
-    Type: Number
-    Default: 4
-
-  InferenceInstanceMaxCount:
-    Type: Number
-    Description: Maximum number of containers to run for the service when auto scaling out
-    Default: 10
-    MinValue: 1
-    ConstraintDescription: Value must be at least one
 
 
 Mappings:
