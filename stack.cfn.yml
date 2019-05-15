@@ -333,7 +333,7 @@ Parameters:
   InferenceQueueDepthScaleInThreshold:
     Type: Number
     Description: Average queue depth value to trigger auto scaling in
-    Default: 10
+    Default: 2
     MinValue: 0
     ConstraintDescription: Value must be between 0 or more
 
@@ -971,10 +971,12 @@ Resources:
   InferenceScaleOutPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
-      AdjustmentType: ChangeInCapacity
+      AdjustmentType: PercentChangeInCapacity
       AutoScalingGroupName: !Ref InferenceNodeGroup
-      ScalingAdjustment: 2
-      Cooldown: 60
+      MinAdjustmentMagnitude: 1
+      StepAdjustments:
+        - MetricIntervalUpperBound: 0.0
+          ScalingAdjustment: 25
 
   InferenceScaleInPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
