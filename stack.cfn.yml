@@ -985,6 +985,7 @@ Resources:
   InferenceScaleOutPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
+      PolicyType: StepScaling
       AdjustmentType: PercentChangeInCapacity
       AutoScalingGroupName: !Ref InferenceNodeGroup
       MinAdjustmentMagnitude: 1
