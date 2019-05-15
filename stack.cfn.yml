@@ -259,7 +259,7 @@ Parameters:
   InferenceNodeVolumeSize:
     Description: Node volume size
     Type: Number
-    Default: 20
+    Default: 200
 
   InferenceNodeGroupName:
     Description: Unique identifier for the Node Group.
@@ -985,13 +985,10 @@ Resources:
   InferenceScaleOutPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
-      PolicyType: StepScaling
-      AdjustmentType: PercentChangeInCapacity
+      AdjustmentType: ChangeInCapacity
       AutoScalingGroupName: !Ref InferenceNodeGroup
-      MinAdjustmentMagnitude: 1
-      StepAdjustments:
-        - MetricIntervalUpperBound: 0.0
-          ScalingAdjustment: 25
+      ScalingAdjustment: 2
+      Cooldown: 60
 
   InferenceScaleInPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
