@@ -773,6 +773,9 @@ Resources:
         - Key: !Sub kubernetes.io/cluster/${EksCluster}
           Value: owned
           PropagateAtLaunch: true
+      TerminationPolicies:
+        - OldestInstance
+        - OldestLaunchTemplate
     UpdatePolicy:
       AutoScalingRollingUpdate:
         MaxBatchSize: 1
@@ -801,6 +804,9 @@ Resources:
         - Key: !Sub kubernetes.io/cluster/${EksCluster}
           Value: owned
           PropagateAtLaunch: true
+      TerminationPolicies:
+        - OldestInstance
+        - OldestLaunchTemplate
     UpdatePolicy:
       AutoScalingRollingUpdate:
         MaxBatchSize: 1
