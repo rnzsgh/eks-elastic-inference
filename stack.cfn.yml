@@ -839,9 +839,6 @@ Resources:
             !Sub |
               #!/bin/bash
               set -o xtrace
-              yum install -y awslogs
-              systemctl enable awslogsd.service
-              systemctl start awslogsd
               yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
               mv /etc/amazon/ssm/seelog.xml.template /etc/amazon/ssm/seelog.xml
               systemctl restart amazon-ssm-agent
@@ -876,9 +873,6 @@ Resources:
             !Sub |
               #!/bin/bash
               set -o xtrace
-              yum install -y awslogs
-              systemctl enable awslogsd.service
-              systemctl start awslogsd
               yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
               mv /etc/amazon/ssm/seelog.xml.template /etc/amazon/ssm/seelog.xml
               systemctl restart amazon-ssm-agent
