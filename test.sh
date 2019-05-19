@@ -12,6 +12,8 @@ AZ_0=us-east-1a
 AZ_1=us-east-1b
 AZ_2=us-east-1c
 
+EI_TYPE=eia1.xlarge
+
 NODE_INSTANCE_TYPE=m5.large
 INFERENCE_NODE_INSTANCE_TYPE=c5.large
 
@@ -49,6 +51,7 @@ aws cloudformation create-stack \
   ParameterKey=InferenceBootstrapArguments,ParameterValue="'$INFERENCE_BOOTSTRAP'" \
   ParameterKey=BootstrapArguments,ParameterValue="'$BOOTSTRAP'" \
   ParameterKey=NodeInstanceType,ParameterValue=$NODE_INSTANCE_TYPE \
-  ParameterKey=InferenceNodeInstanceType,ParameterValue=$INFERENCE_NODE_INSTANCE_TYPE
+  ParameterKey=InferenceNodeInstanceType,ParameterValue=$INFERENCE_NODE_INSTANCE_TYPE \
+  ParameterKey=ElasticInferenceType,ParameterValue=$EI_TYPE
 
 
