@@ -1,7 +1,7 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
 
-Description: POC EKS Elastic Inference
+Description: EKS + Elastic Inference Blog Post
 
 
 Parameters:
