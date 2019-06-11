@@ -8,11 +8,23 @@ CLUSTER_NAME=$STACK_NAME
 
 ACCOUNT_ID=$(aws sts get-caller-identity --output text --query 'Account')
 
+# https://docs.aws.amazon.com/eks/latest/userguide/eks-optimized-ami.html
+AMI_ID=$(aws ec2 describe-images \
+		--owners 602401143452 \
+		--filters \
+			"Name=virtualization-type,Values=hvm" \
+			"Name=architecture,Values=x86_64" \
+			"Name=root-device-type,Values=ebs" \
+			"Name=state,Values=available" \
+			"Name=name,Values=amazon-eks-node-*" \
+		--query 'Images | sort_by(@, &CreationDate)| [-1].ImageId' \
+    --output text)
+
 AZ_0=us-east-1a
 AZ_1=us-east-1b
 AZ_2=us-east-1c
 
-EI_TYPE=eia1.xlarge
+EI_TYPE=eia1.medium
 
 NODE_INSTANCE_TYPE=m5.large
 INFERENCE_NODE_INSTANCE_TYPE=c5.large
@@ -22,9 +34,6 @@ KEY_NAME=SOMETHING
 INFERENCE_BOOTSTRAP="--kubelet-extra-args --node-labels=inference=true,nodegroup=elastic-inference"
 
 BOOTSTRAP="--kubelet-extra-args --node-labels=inference=false,nodegroup=standard"
-
-# https://docs.aws.amazon.com/eks/latest/userguide/eks-optimized-ami.html
-AMI_ID=ami-0abcb9f9190e867ab # us-east-1
 
 # This is the role used to create the stack - needs a trust relationship
 # for CloudFormation and Lambda
