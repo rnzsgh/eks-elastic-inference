@@ -521,20 +521,6 @@ Resources:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
 
-  TaskOutputBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub task-output-bucket-${AWS::AccountId}-${AWS::StackName}
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-
   # EKS Cluster ----------------------------------------------------------------
 
   EksCluster:
