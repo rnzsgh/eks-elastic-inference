@@ -10,10 +10,6 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     Description: The EC2 Key Pair to allow SSH access to the instances
 
-  KeyName:
-    Description: The EC2 Key Pair to allow SSH access to the instances
-    Type: AWS::EC2::KeyPair::KeyName
-
   ElasticInferenceType:
     Description: Elastic Inference type
     Type: String
@@ -21,16 +17,13 @@ Parameters:
 
   EksClusterName:
     Description: EKS Cluster Name
+    Default: eks-ei-cluster
     Type: String
-
-  NodeImageId:
-    Description: AMI id for the node instances.
-    Type: AWS::EC2::Image::Id
 
   NodeInstanceType:
     Description: EC2 instance type for the node instances
     Type: String
-    Default: c5.large
+    Default: m5.large
     ConstraintDescription: Must be a valid EC2 instance type
     AllowedValues:
       - t2.small
@@ -204,7 +197,7 @@ Parameters:
       - z1d.12xlarge
 
   NodeAutoScalingGroupMinSize:
-    Description: Minimum size of Node Group ASG.
+    Description: Minimum size of Node Group ASG
     Type: Number
     Default: 1
 
@@ -236,29 +229,31 @@ Parameters:
   NodeVolumeSize:
     Description: Node volume size
     Type: Number
-    Default: 20
+    Default: 100
 
   InferenceNodeVolumeSize:
     Description: Node volume size
     Type: Number
-    Default: 200
+    Default: 100
 
   InferenceNodeGroupName:
     Description: Unique identifier for the Node Group.
+    Default: inference
     Type: String
 
   NodeGroupName:
     Description: Unique identifier for the Node Group.
+    Default: standard
     Type: String
 
   InferenceBootstrapArguments:
     Description: Arguments to pass to the bootstrap script. See files/bootstrap.sh in https://github.com/awslabs/amazon-eks-ami
-    Default: ""
+    Default: --kubelet-extra-args --node-labels=inference=true,nodegroup=elastic-inference
     Type: String
 
   BootstrapArguments:
     Description: Arguments to pass to the bootstrap script. See files/bootstrap.sh in https://github.com/awslabs/amazon-eks-ami
-    Default: ""
+    Default: --kubelet-extra-args --node-labels=inference=false,nodegroup=standard
     Type: String
 
   AvailabilityZone0:
@@ -282,9 +277,9 @@ Parameters:
   AdminUser:
     Type: String
 
-  LambdaCustomResourceBucket:
+  LambdaCustomResourceBucketPrefix:
     Type: String
-    Default: public-aws-serverless-repo
+    Default: pub-cfn-cust-res-pocs
 
   DefaultTaskQueueVisibilityTimeout:
     Type: Number
@@ -333,6 +328,35 @@ Mappings:
     Public2:
       CIDR: 10.50.64.0/19
 
+  # Amazon EKS Linux AMI - https://docs.aws.amazon.com/eks/latest/userguide/eks-optimized-ami.html
+  AMIMap:
+    us-east-1:
+      AMI: ami-0abcb9f9190e867ab
+    ap-northeast-2:
+      AMI: ami-0a10b2721688ce9d2
+    ap-northeast-1:
+      AMI: ami-0bfedee6a7845c26d
+    ap-southeast-1:
+      AMI: ami-07b922b9b94d9a6d2
+    ap-southeast-2:
+      AMI: ami-0f0121e9e64ebd3dc
+    us-west-2:
+      AMI: ami-0923e4b35a30a5f53
+    us-east-2:
+      AMI: ami-04ea7cb66af82ae4a
+    eu-north-1:
+      AMI: ami-0c65a309fc58f6907
+    ap-south-1:
+      AMI: ami-09c3eb35bb3be46a4
+    eu-central-1:
+      AMI: ami-0d741ed58ca5b342e
+    eu-west-1:
+      AMI: ami-08716b70cac884aaa
+    eu-west-2:
+      AMI: ami-0c7388116d474ee10
+    eu-west-3:
+      AMI: ami-0560aea042fec8b12
+
 
 Resources:
 
@@ -341,7 +365,7 @@ Resources:
   Vpc:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: !FindInMap [CIDRMap, VPC, CIDR]
+      CidrBlock: !FindInMap [ CIDRMap, VPC, CIDR ]
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
@@ -556,7 +580,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !Ref LambdaCustomResourceBucket
+        S3Bucket: !Sub ${LambdaCustomResourceBucketPrefix}-${AWS::Region}
         S3Key: cfn-eks-custom-resource-aws-auth-configmap.zip
       Handler: main
       Role: !Ref CreateRoleArn
@@ -821,7 +845,7 @@ Resources:
       LaunchTemplateData:
         IamInstanceProfile:
           Name: !Ref NodeInstanceProfile
-        ImageId: !Ref NodeImageId
+        ImageId: !FindInMap [ AMIMap, !Ref "AWS::Region", AMI ]
         InstanceType: !Ref InferenceNodeInstanceType
         KeyName: !Ref KeyName
         ElasticInferenceAccelerators:
@@ -857,7 +881,7 @@ Resources:
       LaunchTemplateData:
         IamInstanceProfile:
           Name: !Ref NodeInstanceProfile
-        ImageId: !Ref NodeImageId
+        ImageId: !FindInMap [ AMIMap, !Ref "AWS::Region", AMI ]
         InstanceType: !Ref NodeInstanceType
         KeyName: !Ref KeyName
         Monitoring:
@@ -912,7 +936,7 @@ Resources:
           CloudWatchMetricNamespace: eks-ei/sqs
           CloudWatchMetricName: TaskQueueApproximateNumberOfMessages
       Code:
-        S3Bucket: public-aws-serverless-repo
+        S3Bucket: !Sub ${LambdaCustomResourceBucketPrefix}-${AWS::Region}
         S3Key: lambda-update-sqs-queue-depth.zip
       Handler: main
       Role: !GetAtt TaskQueueDepthLambdaExecutionRole.Arn
