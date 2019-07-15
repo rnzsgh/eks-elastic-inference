@@ -7,7 +7,8 @@ Description: EKS + Elastic Inference Blog Post
 Parameters:
 
   KeyName:
-    Type: AWS::EC2::KeyPair::KeyName
+    Type: String
+    Default: ''
     Description: The EC2 Key Pair to allow SSH access to the instances
 
   ElasticInferenceType:
@@ -330,32 +331,32 @@ Mappings:
 
   # Amazon EKS Linux AMI - https://docs.aws.amazon.com/eks/latest/userguide/eks-optimized-ami.html
   AMIMap:
-    us-east-1:
-      AMI: ami-0abcb9f9190e867ab
-    ap-northeast-2:
-      AMI: ami-0a10b2721688ce9d2
-    ap-northeast-1:
-      AMI: ami-0bfedee6a7845c26d
-    ap-southeast-1:
-      AMI: ami-07b922b9b94d9a6d2
-    ap-southeast-2:
-      AMI: ami-0f0121e9e64ebd3dc
-    us-west-2:
-      AMI: ami-0923e4b35a30a5f53
     us-east-2:
-      AMI: ami-04ea7cb66af82ae4a
-    eu-north-1:
-      AMI: ami-0c65a309fc58f6907
+      AMI: ami-0485258c2d1c3608f
+    us-east-1:
+      AMI: ami-0f2e8e5663e16b436
+    us-west-2:
+      AMI: ami-03a55127c613349a7
     ap-south-1:
-      AMI: ami-09c3eb35bb3be46a4
+      AMI: ami-0a9b1c1807b1a40ab
+    ap-northeast-1:
+      AMI: ami-0fde798d17145fae1
+    ap-northeast-2:
+      AMI: ami-07fd7609df6c8e39b
+    ap-southeast-1:
+      AMI: ami-0361e14efd56a71c7
+    ap-southeast-2:
+      AMI: ami-0237d87bc27daba65
     eu-central-1:
-      AMI: ami-0d741ed58ca5b342e
+      AMI: ami-0b7127e7a2a38802a
     eu-west-1:
-      AMI: ami-08716b70cac884aaa
+      AMI: ami-00ac2e6b3cb38a9b9
     eu-west-2:
-      AMI: ami-0c7388116d474ee10
+      AMI: ami-0147919d2ff9a6ad5
     eu-west-3:
-      AMI: ami-0560aea042fec8b12
+      AMI: ami-0537ee9329c1628a2
+    eu-north-1:
+      AMI: ami-0fd05922165907b85
 
 
 Resources:
