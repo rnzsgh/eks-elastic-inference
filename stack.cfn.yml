@@ -473,7 +473,7 @@ Resources:
   TaskDataBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub task-data-bucket-${AWS::AccountId}-${AWS::StackName}
+      BucketName: !Sub task-data-bucket-${AWS::AccountId}-${AWS::Region}-${AWS::StackName}
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
