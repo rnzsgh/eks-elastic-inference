@@ -50,6 +50,10 @@ create-role:
 update-kubeconfig:
 	@aws eks update-kubeconfig --region $(REGION) --name $(CLUSTER_NAME)
 
+.PHONY: deploy-daemonset
+deploy-daemonset:
+	@kubectl apply -f k8s-daemonset.yml
+
 .PHONY: create-cluster
 create-cluster:
 	@aws --region $(REGION) cloudformation create-stack \
